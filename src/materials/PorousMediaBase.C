@@ -14,15 +14,17 @@
 
 #include "PorousMediaBase.h"
 
+
 // libMesh includes
 #include "libmesh/quadrature.h"
 
 registerMooseObject("BlackBearApp", PorousMediaBase);
 
+template <>
 InputParameters
-PorousMediaBase::validParams()
+validParams<PorousMediaBase>()
 {
-  InputParameters params = Material::validParams();
+  InputParameters params = validParams<Material>();
 
   // parameters for ion diffusion through concrete & solution-mineral reactions
   params.addParam<Real>("initial_diffusivity", 1.0e-9, "diffusivity of ions in medium, m^2/s");
@@ -40,12 +42,15 @@ PorousMediaBase::validParams()
                                        "CONSTANT");
   MooseEnum thermal_capacity_model("CONSTANT ASCE-1992 KODUR-2004 EUROCODE-2004", "CONSTANT");
   MooseEnum aggregate_type("Siliceous Carbonate", "Siliceous");
+  MooseEnum moisture_capacity_model("Xiadsorption GABadsorbtion MaruyamaSorption", "MaruyamaSorption");
 
   params.addParam<MooseEnum>(
       "thermal_conductivity_model", thermal_conductivity_model, "thermal conductivity models");
   params.addParam<MooseEnum>(
       "thermal_capacity_model", thermal_capacity_model, "thermal capacity models");
   params.addParam<MooseEnum>("aggregate_type", aggregate_type, "siliceous or carbonate");
+  params.addParam<MooseEnum>(
+      "moisture_capacity_model", moisture_capacity_model, "moisture_capacity_models");
 
   params.addParam<Real>(
       "ref_density_of_concrete", 2231.0, "refernece density of porous media Kg/m^3");
@@ -66,6 +71,10 @@ PorousMediaBase::validParams()
   MooseEnum moisture_diffusivity_model("Bazant Xi Mensi", "Bazant");
   params.addParam<MooseEnum>(
       "moisture_diffusivity_model", moisture_diffusivity_model, "moisture diffusivity models");
+  MooseEnum coupled_moisture_diffusivity_model("Constant WangXi BazantActivationEnergy", "Constant");
+  params.addParam<MooseEnum>(
+      "coupled_moisture_diffusivity_model", coupled_moisture_diffusivity_model, "coupled moisture diffusivity models");
+
 
   params.addParam<Real>("cement_mass", 354.0, "cement mass (kg) per m^3");
   params.addParam<Real>("aggregate_mass", 1877.0, "aggregate mass (kg) per m^3");
@@ -83,7 +92,7 @@ PorousMediaBase::validParams()
   params.addParam<Real>("C0", 130.0, "empirical constants");
 
   params.addParam<Real>("coupled_moisture_diffusivity_factor",
-                        1.0e-5,
+                        0.00005,
                         "coupling coefficient mositure transfer due to heat");
 
   params.addCoupledVar("relative_humidity", "nonlinear variable name for rel. humidity");
@@ -98,10 +107,12 @@ PorousMediaBase::PorousMediaBase(const InputParameters & parameters)
     _thermal_conductivity_model(getParam<MooseEnum>("thermal_conductivity_model")),
     _thermal_capacity_model(getParam<MooseEnum>("thermal_capacity_model")),
     _aggregate_type(getParam<MooseEnum>("aggregate_type")),
+    _moisture_capacity_model(getParam<MooseEnum>("moisture_capacity_model")),
     _cement_type(getParam<MooseEnum>("cement_type")),
     _aggregate_pore_type(getParam<MooseEnum>("aggregate_pore_type")),
 
     _moisture_diffusivity_model(getParam<MooseEnum>("moisture_diffusivity_model")),
+    _coupled_moisture_diffusivity_model(getParam<MooseEnum>("coupled_moisture_diffusivity_model")),
 
     _input_initial_diffusivity(getParam<Real>("initial_diffusivity")),
     _input_initial_porosity(getParam<Real>("initial_porosity")),
@@ -224,11 +235,11 @@ PorousMediaBase::computeProperties()
     // compute equivalent hydration time used in compute the amount of dehydrated water
     if (T < 105.0)
       _te[qp] = _te_old[qp] + _dt / 86400.0 * 1.0 / (1.0 + std::pow((3.5 - 3.5 * H), 4.0)) *
-                                  std::exp(2700.0 * (1.0 / (273.15 + 25.0) - 1.0 / (273.15 + T)));
+                                  std::exp(2700.0 * (1.0 / (273.15 + 20.0) - 1.0 / (273.15 + T)));
     else
       _te[qp] =
           _te_old[qp] + _dt / 86400.0 * 1.0 / (1.0 + std::pow((3.5 - 3.5 * H), 4.0)) *
-                            std::exp(2700.0 * (1.0 / (273.15 + 25.0) - 1.0 / (273.15 + 105.0)));
+                            std::exp(2700.0 * (1.0 / (273.15 + 20.0) - 1.0 / (273.15 + 105.0)));
 
     // compute amount of hydrated water
     _WH[qp] = 0.21 * _cement_mass * std::pow(_te[qp] / (_cure_time + _te[qp]), 1.0 / 3);
@@ -468,156 +479,197 @@ PorousMediaBase::computeProperties()
     _cw[qp] = 350000.0 * std::pow(374.15 - T, 1.0 / 3.0);
 
     // compute mositure capacity dw/dH for cement
-    Real C = std::exp(855.0 / (T + 273.15));
-    Real N_ct = 1.1;
-    switch (_cement_type)
-    {
-      case 0:
-        N_ct = 1.1;
-        break;
-      case 1:
-        N_ct = 1.0;
-        break;
-      case 2:
-        N_ct = 1.15;
-        break;
-      case 3:
-        N_ct = 1.5;
-        break;
-      default:
-        mooseError("Unknown cement type in mositure capacity calculations");
-        break;
-    }
+    	Real C = std::exp(855.0 / (T + 273.15));
+   	Real C_fit = 4*std::exp(0.0726*T);
+    	Real N_ct = 1.1;
+    	switch (_cement_type)
+    	{
+      		case 0:
+        	  N_ct = 1.1;
+        	  break;
+      		case 1:
+        	  N_ct = 1.0;
+        	  break;
+      		case 2:
+        	  N_ct = 1.15;
+        	  break;
+      		case 3:
+        	  N_ct = 1.5;
+        	  break;
+      		default:
+        	  mooseError("Unknown cement type in mositure capacity calculations");
+        	  break;
+    	}
 
-    Real N_wc = 0.9;
-    if (_water_to_cement < 0.3)
-      N_wc = 0.9;
-    else if (_water_to_cement >= 0.3 && _water_to_cement <= 0.7)
-      N_wc = 0.33 + 2.2 * _water_to_cement;
-    else
-      N_wc = 1.87;
+ 	  Real N_wc = 0.9;
+    	if (_water_to_cement < 0.3)
+      	  N_wc = 0.9;
+    	else if (_water_to_cement >= 0.3 && _water_to_cement <= 0.7)
+      	  N_wc = 0.33 + 2.2 * _water_to_cement;
+    	else
+      	  N_wc = 1.87;
 
-    Real N_te = 5.5;
-    if (_eqv_age[qp] >= 5)
-      N_te = 2.5 + 15.0 / _eqv_age[qp];
+    	  Real N_te = 5.5;
+    	if (_eqv_age[qp] >= 5)
+      	  N_te = 2.5 + 15.0 / _eqv_age[qp];
 
-    Real n = N_te * N_wc * N_ct * 1.0;
+    	  Real n = N_te * N_wc * N_ct * 1.0;
+	  Real k = ((1.0 - 1.0 / n) * C - 1.0) / (C - 1.0);
+          Real k_fit = 0.6*std::exp(0.0055*T);
+    	if (k < 0.0)
+      	  k = 0.0;
+    	else if (k > 1.0)
+      	  k = 1.0;
 
-    Real k = ((1.0 - 1.0 / n) * C - 1.0) / (C - 1.0);
-    if (k < 0.0)
-      k = 0.0;
-    else if (k > 1.0)
-      k = 1.0;
+    	  Real V_ct = 0.9;
+    	switch (_cement_type)
+    	{
+      		case 0:
+        	  V_ct = 0.9;
+        	  break;
+      		case 1:
+       		  V_ct = 1.0;
+        	  break;
+      		case 2:
+        	  V_ct = 0.85;
+        	  break;
+      		case 3:
+        	  V_ct = 0.6;
+        	  break;
+      		default:
+        	mooseError("Unknown cement type in mositure capacity calculations");
+        	break;
+    	}
 
-    Real V_ct = 0.9;
-    switch (_cement_type)
-    {
-      case 0:
-        V_ct = 0.9;
-        break;
-      case 1:
-        V_ct = 1.0;
-        break;
-      case 2:
-        V_ct = 0.85;
-        break;
-      case 3:
-        V_ct = 0.6;
-        break;
-      default:
-        mooseError("Unknown cement type in mositure capacity calculations");
-        break;
-    }
+    	Real V_wc = 0.985;
+	    if (_water_to_cement < 0.3)
+	      V_wc = 0.985;
+	    else if (_water_to_cement >= 0.3 && _water_to_cement <= 0.7)
+	      V_wc = 0.85 + 0.45 * _water_to_cement;
+	    else
+	      V_wc = 1.165;
 
-    Real V_wc = 0.985;
-    if (_water_to_cement < 0.3)
-      V_wc = 0.985;
-    else if (_water_to_cement >= 0.3 && _water_to_cement <= 0.7)
-      V_wc = 0.85 + 0.45 * _water_to_cement;
-    else
-      V_wc = 1.165;
-
-    Real V_te = 0.024;
-    if (_eqv_age[qp] >= 5)
-      V_te = 0.068 - 0.22 / _eqv_age[qp];
-
-    Real Vm = V_te * V_wc * V_ct * 1.0;
-
-    Real W_cement = C * k * Vm * H / (1.0 - k * H) / (1.0 + (C - 1.0) * k * H);
-
-    Real dWdH_cement = (C * k * Vm + W_cement * k * (1.0 + (C - 1.0) * k * H) -
+	    Real V_te = 0.024;
+	    if (_eqv_age[qp] >= 5)
+ 	      V_te = 0.068 - 0.22 / _eqv_age[qp];
+	      Real Vm = V_te * V_wc * V_ct * 1.0;
+	      Real Vm_fit = 0.152*std::exp(-0.025*T);
+	      Real W_cement = C * k * Vm * H / (1.0 - k * H) / (1.0 + (C - 1.0) * k * H);
+	      Real dWdH_cement = (C * k * Vm + W_cement * k * (1.0 + (C - 1.0) * k * H) -
                         W_cement * k * (1.0 - k * H) * (C - 1.0)) /
                        (1.0 - k * H) / (1.0 + (C - 1.0) * k * H);
-
     // compute mositure capacity dw/dH for aggregates
-    Real n_agg = 1.5;
-    switch (_aggregate_pore_type)
-    {
-      case 0:
-        n_agg = 1.5;
-        break;
-      case 1:
-        n_agg = 2.0;
-        break;
-      default:
-        mooseError("unknown aggregate pore sturtures");
-        break;
-    }
+	    Real n_agg = 1.5;
+	    switch (_aggregate_pore_type)
+	    {
+	      case 0:
+	        n_agg = 1.5;
+	        break;
+	      case 1:
+	        n_agg = 2.0;
+	        break;
+	      default:
+	        mooseError("unknown aggregate pore sturtures");
+	        break;
+	    }
 
-    n = 4.063 * n_agg;
-    k = ((1.0 - 1.0 / n) * C - 1.0) / (C - 1.0);
-    if (k < 0.0)
-      k = 0.0;
-    else if (k > 1.0)
-      k = 1.0;
+	    n = 4.063 * n_agg;
+	    k = ((1.0 - 1.0 / n) * C - 1.0) / (C - 1.0);
+	    if (k < 0.0)
+	      k = 0.0;
+	    else if (k > 1.0)
+	      k = 1.0;
 
-    Real V_agg = 0.05;
-    switch (_aggregate_pore_type)
-    {
-      case 0:
-        V_agg = 0.05;
-        break;
-      case 1:
-        V_agg = 0.10;
-        break;
-      default:
-        mooseError("unknown aggregate pore sturtures");
-        break;
-    }
+	    Real V_agg = 0.05;
+	    switch (_aggregate_pore_type)
+	    {
+	      case 0:
+	        V_agg = 0.05;
+	        break;
+	      case 1:
+	        V_agg = 0.10;
+	        break;
+	      default:
+	        mooseError("unknown aggregate pore sturtures");
+	        break;
+	    }
 
-    Vm = 0.0647 * V_agg;
+	    Vm = 0.0647 * V_agg;
 
-    Real W_agg = C * k * Vm * H / (1.0 - k * H) / (1.0 + (C - 1.0) * k * H);
-    Real dWdH_agg = (C * k * Vm + W_agg * k * (1.0 + (C - 1.0) * k * H) -
+	    Real W_agg = C * k * Vm * H / (1.0 - k * H) / (1.0 + (C - 1.0) * k * H);
+	    Real dWdH_agg = (C * k * Vm + W_agg * k * (1.0 + (C - 1.0) * k * H) -
                      W_agg * k * (1.0 - k * H) * (C - 1.0)) /
                     (1.0 - k * H) / (1.0 + (C - 1.0) * k * H);
 
-    // compute weight percentages of agrregates and cement paste
-    Real _f_agg = _aggregate_mass / (_aggregate_mass + _cement_mass);
-    Real _f_cp = _cement_mass / (_aggregate_mass + _cement_mass);
+	    Real W_agg_fit = C_fit * k_fit * Vm_fit * H / (1.0 - k_fit * H) / (1.0 + (C_fit - 1.0) * k_fit * H);
+	    Real dWdH_agg_fit = (C_fit * k_fit * Vm_fit + W_agg_fit * k_fit * (1.0 + (C_fit - 1.0) * k_fit * H) -
+                     W_agg_fit * k_fit * (1.0 - k_fit * H) * (C_fit - 1.0)) /
+                    (1.0 - k_fit * H) / (1.0 + (C_fit - 1.0) * k_fit * H);
 
-    // compute combined dW/dH of concrete
-    _moisture_capacity[qp] = (_f_agg * dWdH_agg + _f_cp * dWdH_cement) * _input_density_of_concrete;
-    _moisture_content[qp] = (_f_agg * W_agg + _f_cp * W_cement) * _input_density_of_concrete;
+
+	    // compute weight percentages of agrregates and cement paste
+		    Real _f_agg = _aggregate_mass / (_aggregate_mass + _cement_mass);
+		    Real _f_cp = _cement_mass / (_aggregate_mass + _cement_mass);
+
+	// For Maruyama Sorption
+	Real W0 = 0.25;
+        Real W_cement_90 = W0*(-0.012*(T-20)+1);
+        Real W_cement_40 = 1.44*W0*100*2*std::exp(-0.017*(T-20))*(0.39-0.12*std::log(-std::log(0.4)))/1000 ;
+
+    switch (_moisture_capacity_model)
+    {
+      case 0: // Xiadsorption
+	    // compute combined dW/dH of concrete
+   		    _moisture_capacity[qp] = (_f_agg * dWdH_agg + _f_cp * dWdH_cement) * _input_density_of_concrete;
+		    _moisture_content[qp] = (_f_agg * W_agg + _f_cp * W_cement) * _input_density_of_concrete;
+	break;
+      case 1: // GABadsorbtion
+	    // compute combined dW/dH of concrete
+   		    _moisture_capacity[qp] = (_f_agg * dWdH_agg_fit) * _input_density_of_concrete;
+		    _moisture_content[qp] = (_f_agg * W_agg_fit) * _input_density_of_concrete;
+	break;
+      case 2: // MaruyamaSorption
+	if (H<=1 && H >=0.9)
+	{
+		W_cement = W_cement_90+(W0-W_cement_90)*(H-0.9)/0.1;
+		dWdH_cement = (W0-W_cement_90)/0.1;
+	}
+        else if (H<0.9 && H >0.4)
+	{
+		W_cement = (W_cement_90-W_cement_40)*(H-0.4)/0.5+W_cement_40;
+		dWdH_cement = (W_cement_90-W_cement_40)/0.5;
+	}
+	else if (H<=0.4)
+	{
+		W_cement = 1.44*W0*100*2*std::exp(-0.017*(T-20))*(0.39-0.12*std::log(-std::log(H)))/1000;
+		dWdH_cement = 1.44*W0*100*2*std::exp(-0.017*(T-20))*(-0.12/H/std::log(H))/1000;
+	}
+	_moisture_capacity[qp] = _f_agg*dWdH_cement * _input_density_of_concrete;
+	_moisture_content[qp] = _f_agg*W_cement * _input_density_of_concrete;
+	break;	
+      default:
+        mooseError("Unknown moisture capacity model");
+        break;
+    }
 
     // compute moisture diffusivity
     Real Dh0 = 3.10e-10;
     Real f1_T = 0.0;
     if (T <= 95.0)
-      f1_T = std::exp(2700.0 * (1.0 / (25.0 + 273.15) - 1.0 / (T + 273.15)));
+      f1_T = std::exp(2500.0 * (1.0 / (20.0 + 273.15) - 1.0 / (T + 273.15)));
     else
-      f1_T = std::exp(2700.0 * (1.0 / (25.0 + 273.15) - 1.0 / (95.0 + 273.15)));
+      f1_T = std::exp(2500.0 * (1.0 / (20.0 + 273.15) - 1.0 / (95.0 + 273.15)));
 
     Real f2_T = 0.0;
     if (T > 95.0)
       f2_T = std::exp((T - 95.0) / (0.881 + 0.214 * (T - 95.0)));
 
     // parameters associated with Bazant model
-    Real alfa_d = 1.0;
-    if (T <= 95.0)
-      alfa_d = 1.0 / (1.0 + 19.0 * (95.0 - T) / 70.0);
-    else
-      alfa_d = 1.0;
+    Real alfa_d = 0.05;
+//    if (T <= 95.0)
+//      alfa_d = 1.0 / (1.0 + 19.0 * (95.0 - T) / 70.0);
+//    else
+//      alfa_d = 1.0;
 
     // Parameters associated with Mensi's model
     Real A = _A;
@@ -633,38 +685,53 @@ PorousMediaBase::computeProperties()
     Real betta_h = -14.4 + 50.4 * wc - 41.8 * std::pow(wc, 2.0);
     Real gamma_h = 31.3 - 136.0 * wc + 162.0 * std::pow(wc, 2.0);
 
-    Real power1 = std::pow(10.0, gamma_h * (H - 1));
+    Real power1 = std::pow(10.0, gamma_h * (std::min(H,1.0) - 1));
     Real power2 = std::pow(2.0, -1.0 * power1);
 
-    Real Dhcp = alfa_h + betta_h * (1.0 - power2);
+    Real Dhcp = (alfa_h + betta_h * (1.0 - power2))/10/24/60/60;
 
     switch (_moisture_diffusivity_model)
     {
       case 0: // Bazant
         if (T <= 95.0)
           Dh0 =
-              _D1 * (alfa_d + (1 - alfa_d) / (1.0 + std::pow((1.0 - H) / (1.0 - 0.75), _n_power)));
+              _moisture_capacity[qp]*_D1*(alfa_d + (1 - alfa_d) / (1.0 + std::pow((1.0 - H) / (1.0 - 0.75), _n_power)));
         else
-          Dh0 = _D1;
+          Dh0 = _moisture_capacity[qp]*_D1;
         break;
       case 1: // Xi
-        Dh0 = Dhcp * (1 + gi / ((1 - gi) / 3 - 1));
+        Dh0 = Dhcp * (1 + gi / ((1 - gi) / 3 - 1)) ;
         break;
       case 2: // Mensi
-        Dh0 = A * std::exp(B * C1);
+        Dh0 =  _moisture_capacity[qp]* A * std::exp(B * C1);
         break;
       default:
         mooseError("unknown moisture diffusivity models");
         break;
     }
 
-    if (T <= 95.0)
-      _Dh[qp] = Dh0 * f1_T;
-    else
-      _Dh[qp] = Dh0 * f1_T * f2_T;
 
     // compute the coupled mositure diffusivity due to thermal gradient
-    _Dht[qp] = _alfa_Dht * _Dh[qp];
+
+    switch (_coupled_moisture_diffusivity_model)
+    {
+      case 0: // constant
+    	_Dht[qp] = _alfa_Dht;
+        break;
+      case 1: // WangXi model
+	_Dht[qp] = (0.0328*(T-20) + 7.0881) * 10E-9;
+    	break;
+      case 2: //BazantActivationEnergy
+    	_Dht[qp] = 0;
+	    if (T <= 95.0)
+	      _Dh[qp] = Dh0 * f1_T;
+	    else
+	      _Dh[qp] = Dh0 * f1_T * f2_T;
+	break;
+      default:
+        mooseError("unknown coupled moisture diffusivity models");
+        break;
+    }
     _darcy_moisture_flux[qp] = -_Dh[qp] * _grad_rh[qp];
   }
 }
