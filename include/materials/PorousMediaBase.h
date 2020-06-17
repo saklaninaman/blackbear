@@ -14,18 +14,12 @@
 
 #include "Material.h"
 
-#ifndef POROUSMEDIABASE_H
-#define POROUSMEDIABASE_H
-
-// Forward Declarations
-class PorousMediaBase;
-
-template <>
-InputParameters validParams<PorousMediaBase>();
+#pragma once
 
 class PorousMediaBase : public Material
 {
 public:
+  static InputParameters validParams();
   PorousMediaBase(const InputParameters & parameters);
 
 protected:
@@ -111,5 +105,3 @@ private:
   /// coupled to mineral concentrations(i.e., amount in porous matrix)
   std::vector<const VariableValue *> _vals;
 };
-
-#endif // POROUSMEDIABASE_H

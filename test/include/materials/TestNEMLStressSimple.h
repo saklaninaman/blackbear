@@ -12,18 +12,17 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETEELASTICASR_H
-#define CONCRETEELASTICASR_H
+#pragma once
 
-#include "SolidModel.h"
+#include "NEMLStressBase.h"
 
-class ConcreteElasticASR : public SolidModel
+#include "neml_interface.h"
+
+class TestNEMLStressSimple : public NEMLStressBase
 {
 public:
-  ConcreteElasticASR(const InputParameters & parameters);
+  static InputParameters validParams();
+  TestNEMLStressSimple(const InputParameters & parameters);
+
+protected:
 };
-
-template <>
-InputParameters validParams<ConcreteElasticASR>();
-
-#endif

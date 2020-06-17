@@ -12,81 +12,67 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef NEMLSTRESS_H
-#define NEMLSTRESS_H
+#pragma once
 
-#include "ComputeStressBase.h"
-
+#include "NEMLStressBase.h"
 #include "neml_interface.h"
 
-class NEMLStress;
+/**
+ * NEMLStress computes the stress using a constitutive model provided by the NEML library.
+ * Parameters for that model are defined in an xml file and optionally in the input file.
+ */
 
-template <>
-InputParameters validParams<NEMLStress>();
-
-class NEMLStress : public ComputeStressBase
+class NEMLStress : public NEMLStressBase
 {
 public:
+  static InputParameters validParams();
   NEMLStress(const InputParameters & parameters);
 
-  virtual void computeQpStress() override;
-  virtual void initQpStatefulProperties() override;
-
-protected:
-  /// File name of the NEML XML database
-  FileName _fname;
-  /// Model name in NEML XML database
-  std::string _mname;
-  /// NEML model
-  std::unique_ptr<neml::NEMLModel> _model;
-  /// History variables used by NEML model
-  ///@{
-  MaterialProperty<std::vector<Real>> & _hist;
-  const MaterialProperty<std::vector<Real>> & _hist_old;
-  ///@}
-  /// Old mechanical strain
-  const MaterialProperty<RankTwoTensor> & _mechanical_strain_old;
-  /// Old stress
-  const MaterialProperty<RankTwoTensor> & _stress_old;
-  /// Strain energy
-  ///@{
-  MaterialProperty<Real> & _energy;
-  const MaterialProperty<Real> & _energy_old;
-  ///@}
-  /// Dissipation
-  ///@{
-  MaterialProperty<Real> & _dissipation;
-  const MaterialProperty<Real> & _dissipation_old;
-  ///@}
-  /// Coupled temperature variable (defaults to zero if not specified)
-  ///@{
-  const VariableValue & _temperature;
-  const VariableValue & _temperature_old;
-  ///@}
-  /// Inelastic strain tensor
-  MaterialProperty<RankTwoTensor> & _inelastic_strain;
+private:
+  /**
+   * Get values from the input file that will be substituted in for the nemlNames provided in the
+   *input file
+   * @param nemlNames variables names from input file
+   * @return vector containing the values that will be substituted in for the each nemlNames
+   **/
+  std::vector<Real> constructNemlSubstitutionList(const std::vector<std::string> & nemlNames) const;
 
   /**
-   * Translates a RankTwoTensor object to a NEML tensor stored in a vector
-   * format.
-   * @param in  RankTwoTensor to be translated
-   * @param out NEML vector output
+   * Error checking: find strings in string list 1 that are not found in string list 2
+   * @param strList1
+   * @param strList2
+   * @return return strings from strList1 not found in strList2
    **/
-  void RankTwoTensorToNeml(const RankTwoTensor & in, double * const out);
+  std::string compareVectorsOfStrings(const std::vector<std::string> & strList1,
+                                      const std::vector<std::string> & strList2) const;
 
   /**
-   * Translates a NEML tensor stored in vector format to a RankTwoTensor.
-   * @param in  NEML vector to be translated
-   * @param out RankTwoTensor output
+   * Parse the xml file into a string
+   * @param fname xml file name to be read in
+   * @return string containing file contents
    **/
-  void NemlToRankTwoTensor(const double * const in, RankTwoTensor & out);
+  std::string parseFileIntoString(const FileName & fname) const;
 
   /**
-   * Translates a NEML elasticity tensor to a RankFourTensor.
-   * @param in  NEML elasticity tensor to be translated
-   * @param out RankFourTensor output
+   * Get a list of variable names specified in the xml file
+   * @param xmlStringForNeml string containing xml file
+   * @return list of the variable names found in the xml file.
    **/
-  void NemlToRankFourTensor(const double * const in, RankFourTensor & out);
+  std::vector<std::string> listOfVariablesInXml(const std::string & xmlStringForNeml) const;
+
+  /**
+   * Check that all variable names in xml file are also in the input file and vice versa
+   * @param nemlNames variables names from input file
+   * @param xmlStringForNeml string containing the xml file
+   **/
+  void errorCheckVariableNamesFromInputFile(const std::vector<std::string> & nemlNames,
+                                            const std::string & xmlStringForNeml) const;
+
+  /**
+   * Substitute values in for the variables names found in the string version of the xml file
+   * @param xmlStringForNeml string containing the xml file, returned version of this string has
+   *values substituted in for variables names
+   **/
+
+  void replaceXmlVariables(std::string & xmlStringForNeml) const;
 };
-
-#endif // NEMLSTRESS_H

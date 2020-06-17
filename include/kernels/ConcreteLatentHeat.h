@@ -12,20 +12,9 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETELATENTHEAT_H
-#define CONCRETELATENTHEAT_H
+#pragma once
 
 #include "TimeDerivative.h"
-
-// Forward Declaration
-class ConcreteLatentHeat;
-
-/**
- * validParams returns the parameters that this Kernel accepts / needs
- * The actual body of the function MUST be in the .C file.
- */
-template <>
-InputParameters validParams<ConcreteLatentHeat>();
 
 /**
  * Define the Kernel for a CoupledConvectionReactionSub operator that looks like:
@@ -37,6 +26,7 @@ InputParameters validParams<ConcreteLatentHeat>();
 class ConcreteLatentHeat : public TimeDerivative
 {
 public:
+  static InputParameters validParams();
   ConcreteLatentHeat(const InputParameters & parameters);
 
 protected:
@@ -58,5 +48,3 @@ protected:
   /// Time derivatives of relative humidity (moisture)
   const VariableValue & _H_dot;
 };
-
-#endif // CONCRETELATENTHEAT_H

@@ -1,6 +1,3 @@
-# @Requirement F3.50
-# @Requirement F3.60
-
 [GlobalParams]
   displacements = 'disp_x disp_y'
   volumetric_locking_correction = true
@@ -102,12 +99,10 @@
 
 [Contact]
   [./leftright]
-    system = Constraint
     master = 6
     slave = 5
     model = frictionless
     tangential_tolerance = 5e-4
-    formulation = default
     penalty = 1.0e12
     normalize_penalty = true
   [../]

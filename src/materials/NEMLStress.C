@@ -17,169 +17,148 @@
 
 registerMooseObject("BlackBearApp", NEMLStress);
 
-template <>
 InputParameters
-validParams<NEMLStress>()
+NEMLStress::validParams()
 {
-  InputParameters params = validParams<ComputeStressBase>();
+  InputParameters params = NEMLStressBase::validParams();
   params.addClassDescription("Use a constitutive model in the NEML library to compute stress");
   params.addRequiredParam<FileName>("database", "Path to NEML XML database.");
   params.addRequiredParam<std::string>("model", "Model name in NEML database.");
-  params.addCoupledVar("temperature", 0.0, "Coupled temperature");
+  params.addParam<std::vector<std::string>>("neml_variable_iname",
+                                            "Names of NEML xml name/value pairs");
+
+  params.addParam<Real>("neml_variable_value0",
+                        "NEML xml variable value for neml_variable_iname[0]");
+  params.addParam<Real>("neml_variable_value1",
+                        "NEML xml variable value for neml_variable_iname[1]");
+  params.addParam<Real>("neml_variable_value2",
+                        "NEML xml variable value for neml_variable_iname[2]");
+  params.addParam<Real>("neml_variable_value3",
+                        "NEML xml variable value for neml_variable_iname[3]");
+  params.addParam<Real>("neml_variable_value4",
+                        "NEML xml variable value for neml_variable_iname[4]");
+  params.addParam<Real>("neml_variable_value5",
+                        "NEML xml variable value for neml_variable_iname[5]");
+  params.addParam<Real>("neml_variable_value6",
+                        "NEML xml variable value for neml_variable_iname[6]");
+  params.addParam<Real>("neml_variable_value7",
+                        "NEML xml variable value for neml_variable_iname[7]");
+
   return params;
 }
 
-NEMLStress::NEMLStress(const InputParameters & parameters)
-  : ComputeStressBase(parameters),
-    _fname(getParam<FileName>("database")),
-    _mname(getParam<std::string>("model")),
-    _hist(declareProperty<std::vector<Real>>(_base_name + "hist")),
-    _hist_old(getMaterialPropertyOld<std::vector<Real>>(_base_name + "hist")),
-    _mechanical_strain_old(
-        getMaterialPropertyOldByName<RankTwoTensor>(_base_name + "mechanical_strain")),
-    _stress_old(getMaterialPropertyOld<RankTwoTensor>(_base_name + "stress")),
-    _energy(declareProperty<Real>(_base_name + "energy")),
-    _energy_old(getMaterialPropertyOld<Real>(_base_name + "energy")),
-    _dissipation(declareProperty<Real>(_base_name + "dissipation")),
-    _dissipation_old(getMaterialPropertyOld<Real>(_base_name + "dissipation")),
-    _temperature(coupledValue("temperature")),
-    _temperature_old(coupledValueOld("temperature")),
-    _inelastic_strain(declareProperty<RankTwoTensor>(_base_name + "inelastic_strain"))
+NEMLStress::NEMLStress(const InputParameters & parameters) : NEMLStressBase(parameters)
 {
-  _model = neml::parse_xml_unique(_fname, _mname);
+  FileName fname(getParam<FileName>("database"));
+  std::string mname(getParam<std::string>("model"));
+
+  std::string xmlStringForNeml = parseFileIntoString(fname);
+  if (isParamValid("neml_variable_iname"))
+    replaceXmlVariables(xmlStringForNeml);
+
+  _model = neml::parse_string_unique(xmlStringForNeml, mname);
 }
 
-void
-NEMLStress::computeQpStress()
+std::string
+NEMLStress::compareVectorsOfStrings(const std::vector<std::string> & strList1,
+                                    const std::vector<std::string> & strList2) const
 {
-  // We must update:
-  // 1) _stress
-  // 2) _Jacobian_mult
-  // 3) _elastic_strain
-  // 4) _history
-
-  // First do some declaration and translation
-  double s_np1[6];
-  double s_n[6];
-  RankTwoTensorToNeml(_stress_old[_qp], s_n);
-
-  double e_np1[6];
-  RankTwoTensorToNeml(_mechanical_strain[_qp], e_np1);
-  double e_n[6];
-  RankTwoTensorToNeml(_mechanical_strain_old[_qp], e_n);
-
-  double t_np1 = _t;
-  double t_n = _t - _dt;
-
-  double T_np1 = _temperature[_qp];
-  double T_n = _temperature_old[_qp];
-
-  double * h_np1 = (_model->nhist() > 0 ? &(_hist[_qp][0]) : nullptr);
-  const double * const h_n = (_model->nhist() > 0 ? &(_hist_old[_qp][0]) : nullptr);
-
-  double A_np1[36];
-
-  double u_np1;
-  double u_n = _energy_old[_qp];
-
-  double p_np1;
-  double p_n = _dissipation_old[_qp];
-
-  double estrain[6];
-
-  int ier;
-
-  // Actually call the update
-  ier = _model->update_sd(
-      e_np1, e_n, T_np1, T_n, t_np1, t_n, s_np1, s_n, h_np1, h_n, A_np1, u_np1, u_n, p_np1, p_n);
-
-  if (ier != neml::SUCCESS)
-    throw MooseException("NEML stress update failed!");
-
-  // Do more translation, now back to tensors
-  NemlToRankTwoTensor(s_np1, _stress[_qp]);
-  NemlToRankFourTensor(A_np1, _Jacobian_mult[_qp]);
-
-  // Get the elastic strain
-  ier = _model->elastic_strains(s_np1, T_np1, h_np1, estrain);
-
-  if (ier != neml::SUCCESS)
-    mooseError("Error in NEML call for elastic strain!");
-
-  // Translate
-  NemlToRankTwoTensor(estrain, _elastic_strain[_qp]);
-
-  // For EPP purposes calculate the inelastic strain
-  double pstrain[6];
-  for (unsigned int i = 0; i < 6; ++i)
-    pstrain[i] = e_np1[i] - estrain[i];
-
-  NemlToRankTwoTensor(pstrain, _inelastic_strain[_qp]);
-
-  // Store dissipation
-  _energy[_qp] = u_np1;
-  _dissipation[_qp] = p_np1;
-}
-
-void
-NEMLStress::initQpStatefulProperties()
-{
-  ComputeStressBase::initQpStatefulProperties();
-
-  // Figure out initial history
-  _hist[_qp].resize(_model->nhist());
-
-  if (_model->nhist() > 0)
+  std::string missingNames;
+  for (auto & str1 : strList1)
   {
-    int ier = _model->init_hist(&(_hist[_qp][0]));
-    if (ier != neml::SUCCESS)
-      mooseError("Error initializing NEML history!");
-  }
-
-  _energy[_qp] = 0.0;
-  _dissipation[_qp] = 0.0;
-}
-
-void
-NEMLStress::RankTwoTensorToNeml(const RankTwoTensor & in, double * const out)
-{
-  double inds[6][2] = {{0, 0}, {1, 1}, {2, 2}, {1, 2}, {0, 2}, {0, 1}};
-  double mults[6] = {1.0, 1.0, 1.0, sqrt(2.0), sqrt(2.0), sqrt(2.0)};
-
-  for (unsigned int i = 0; i < 6; ++i)
-  {
-    out[i] = in(inds[i][0], inds[i][1]) * mults[i];
-  }
-}
-
-void
-NEMLStress::NemlToRankTwoTensor(const double * const in, RankTwoTensor & out)
-{
-  double inds[6][2] = {{0, 0}, {1, 1}, {2, 2}, {1, 2}, {0, 2}, {0, 1}};
-  double mults[6] = {1.0, 1.0, 1.0, sqrt(2.0), sqrt(2.0), sqrt(2.0)};
-
-  for (unsigned int i = 0; i < 6; ++i)
-  {
-    out(inds[i][0], inds[i][1]) = in[i] / mults[i];
-    out(inds[i][1], inds[i][0]) = in[i] / mults[i];
-  }
-}
-
-void
-NEMLStress::NemlToRankFourTensor(const double * const in, RankFourTensor & out)
-{
-  double inds[6][2] = {{0, 0}, {1, 1}, {2, 2}, {1, 2}, {0, 2}, {0, 1}};
-  double mults[6] = {1.0, 1.0, 1.0, sqrt(2.0), sqrt(2.0), sqrt(2.0)};
-
-  for (unsigned int i = 0; i < 6; ++i)
-  {
-    for (unsigned int j = 0; j < 6; ++j)
+    bool found = false;
+    for (auto & str2 : strList2)
     {
-      out(inds[i][0], inds[i][1], inds[j][0], inds[j][1]) = in[i * 6 + j] / (mults[i] * mults[j]);
-      out(inds[i][1], inds[i][0], inds[j][0], inds[j][1]) = in[i * 6 + j] / (mults[i] * mults[j]);
-      out(inds[i][0], inds[i][1], inds[j][1], inds[j][0]) = in[i * 6 + j] / (mults[i] * mults[j]);
-      out(inds[i][1], inds[i][0], inds[j][1], inds[j][0]) = in[i * 6 + j] / (mults[i] * mults[j]);
+      if (str1 == str2)
+      {
+        found = true;
+        break;
+      }
+    }
+    if (!found)
+      missingNames += str1 + " ";
+  }
+  return missingNames;
+}
+
+std::string
+NEMLStress::parseFileIntoString(const FileName & fname) const
+{
+  std::ifstream inputStream(fname.c_str());
+  std::ostringstream xmlString;
+  xmlString << inputStream.rdbuf();
+  return xmlString.str();
+}
+
+std::vector<std::string>
+NEMLStress::listOfVariablesInXml(const std::string & xmlStringForNeml) const
+{
+  std::vector<std::string> xmlVariableNames;
+  size_t open = xmlStringForNeml.find("{");
+  size_t close = xmlStringForNeml.find("}");
+  while (open != std::string::npos)
+  {
+    xmlVariableNames.push_back(xmlStringForNeml.substr(open + 1, close - (open + 1)));
+    open = xmlStringForNeml.find("{", open + 1);
+    close = xmlStringForNeml.find("}", open);
+  }
+  return xmlVariableNames;
+}
+
+void
+NEMLStress::errorCheckVariableNamesFromInputFile(const std::vector<std::string> & nemlNames,
+                                                 const std::string & xmlStringForNeml) const
+{
+  std::vector<std::string> xmlNames = listOfVariablesInXml(xmlStringForNeml);
+  std::string extraNemlNames = compareVectorsOfStrings(nemlNames, xmlNames);
+  std::string extraXmlNames = compareVectorsOfStrings(xmlNames, nemlNames);
+  if (!extraNemlNames.empty() || !extraXmlNames.empty())
+  {
+    mooseError(
+        std::string("Mismatched NEML variable names between xml and BlackBear input file.\n") +
+        "  BlackBear input file variable names not found in NEML xml file: " + extraNemlNames +
+        "\n  NEML xml file variable names not found in BlackBear input file: " + extraXmlNames);
+  }
+}
+
+void
+NEMLStress::replaceXmlVariables(std::string & xmlStringForNeml) const
+{
+  std::vector<std::string> nemlNames = getParam<std::vector<std::string>>("neml_variable_iname");
+  std::vector<Real> nemlValues = constructNemlSubstitutionList(nemlNames);
+  errorCheckVariableNamesFromInputFile(nemlNames, xmlStringForNeml);
+
+  for (size_t i = 0; i < nemlNames.size(); ++i)
+  {
+    std::string varName = nemlNames[i];
+    Real varValue = nemlValues[i];
+    size_t posOfFirstCurlyBrace = xmlStringForNeml.find(varName) - 1;
+    size_t varLengthWithBothCurlyBraces = varName.length() + 2;
+    xmlStringForNeml.replace(
+        posOfFirstCurlyBrace, varLengthWithBothCurlyBraces, std::to_string(varValue));
+  }
+}
+
+std::vector<Real>
+NEMLStress::constructNemlSubstitutionList(const std::vector<std::string> & nemlNames) const
+{
+  std::vector<Real> nemlValues;
+  if (isParamValid("neml_variable_iname"))
+  {
+    if (nemlNames.size() > 8)
+      mooseError("NEMLStressVariableInput can only have up to eight neml_variable_iname[0-7]");
+
+    for (size_t i = 0; i < nemlNames.size(); ++i)
+    {
+      std::string iname = "neml_variable_value" + std::to_string(i);
+      if (isParamValid(iname))
+        nemlValues.push_back(getParam<Real>(iname));
+      else
+        mooseError(
+            "NEMLStressVariableInput: incorrect name or number of neml_variable_value keywords.");
     }
   }
+  return nemlValues;
 }
+
 #endif // NEML_ENABLED

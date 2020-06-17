@@ -12,18 +12,14 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETEEXPANSIONEIGENSTRAINBASE_H
-#define CONCRETEEXPANSIONEIGENSTRAINBASE_H
+#pragma once
 
 #include "ComputeEigenstrainBase.h"
 #include "RankTwoTensor.h"
 
 #include <array>
 
-class ConcreteExpansionEigenstrainBase;
 
-template <>
-InputParameters validParams<ConcreteExpansionEigenstrainBase>();
 
 /**
  * ConcreteExpansionEigenstrainBase is a base class for computing the
@@ -39,6 +35,7 @@ InputParameters validParams<ConcreteExpansionEigenstrainBase>();
 class ConcreteExpansionEigenstrainBase : public ComputeEigenstrainBase
 {
 public:
+  static InputParameters validParams();
   ConcreteExpansionEigenstrainBase(const InputParameters & parameters,
                                    const std::string volumetric_expansion_name);
 
@@ -173,5 +170,3 @@ protected:
   Real
   computeWi(const unsigned int N1, const unsigned int N5, const unsigned int N6, const Real sig_k);
 };
-
-#endif // CONCRETEEXPANSIONEIGENSTRAINBASE_H

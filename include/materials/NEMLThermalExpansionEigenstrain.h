@@ -12,17 +12,13 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef NEMLTHERMALEXPANSIONEIGENSTRAIN_H
-#define NEMLTHERMALEXPANSIONEIGENSTRAIN_H
+#pragma once
 
 #include "ComputeThermalExpansionEigenstrainBase.h"
 
 #include "neml_interface.h"
 
-class NEMLThermalExpansionEigenstrain;
 
-template <>
-InputParameters validParams<NEMLThermalExpansionEigenstrain>();
 
 /**
  *  NEMLThermalExpansionEigenstrain computes the thermal expansion
@@ -31,6 +27,7 @@ InputParameters validParams<NEMLThermalExpansionEigenstrain>();
 class NEMLThermalExpansionEigenstrain : public ComputeThermalExpansionEigenstrainBase
 {
 public:
+  static InputParameters validParams();
   NEMLThermalExpansionEigenstrain(const InputParameters & parameters);
   virtual void initQpStatefulProperties() override;
 
@@ -54,5 +51,3 @@ protected:
   /// Old state of the coupled temperature
   const VariableValue & _temperature_old;
 };
-
-#endif // NEMLTHERMALEXPANSIONEIGENSTRAIN_H

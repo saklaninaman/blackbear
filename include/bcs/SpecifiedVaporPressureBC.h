@@ -12,15 +12,11 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef SPECIFIEDVAPORPRESSUREBC_H
-#define SPECIFIEDVAPORPRESSUREBC_H
+#pragma once
 
 #include "NodalBC.h"
 
-class SpecifiedVaporPressureBC;
 
-template <>
-InputParameters validParams<SpecifiedVaporPressureBC>();
 
 /**
  * Boundary condition of a Dirichlet type
@@ -30,6 +26,7 @@ InputParameters validParams<SpecifiedVaporPressureBC>();
 class SpecifiedVaporPressureBC : public NodalBC
 {
 public:
+  static InputParameters validParams();
   SpecifiedVaporPressureBC(const InputParameters & parameters);
 
 protected:
@@ -49,5 +46,3 @@ protected:
   Real _initial;
   Real _final;
 };
-
-#endif /* SPECIFIEDVAPORPRESSUREBC_H */

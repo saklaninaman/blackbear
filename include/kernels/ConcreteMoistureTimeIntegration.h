@@ -12,20 +12,9 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETEMOISTURETIMEINTEGRATION_H
-#define CONCRETEMOISTURETIMEINTEGRATION_H
+#pragma once
 
 #include "TimeDerivative.h"
-
-// Forward Declaration
-class ConcreteMoistureTimeIntegration;
-
-/**
- * validParams returns the parameters that this Kernel accepts / needs
- * The actual body of the function MUST be in the .C file.
- */
-template <>
-InputParameters validParams<ConcreteMoistureTimeIntegration>();
 
 /**
  * Define the Kernel for a CoupledConvectionReactionSub operator that looks like:
@@ -37,6 +26,7 @@ InputParameters validParams<ConcreteMoistureTimeIntegration>();
 class ConcreteMoistureTimeIntegration : public TimeDerivative
 {
 public:
+  static InputParameters validParams();
   ConcreteMoistureTimeIntegration(const InputParameters & parameters);
 
 protected:
@@ -65,5 +55,3 @@ protected:
   /// Material property of porosity
   const MaterialProperty<Real> & _moisture_capacity; //  dW/dH
 };
-
-#endif // CONCRETEMOISTURETIMEINTEGRATION_H

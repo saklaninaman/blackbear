@@ -12,17 +12,10 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETEEXPANSIONMICROCRACKINGDAMAGE_H
-#define CONCRETEEXPANSIONMICROCRACKINGDAMAGE_H
+#pragma once
 
 #include "ScalarDamageBase.h"
 #include "GuaranteeConsumer.h"
-
-// Forward declaration
-class ConcreteExpansionMicrocrackingDamage;
-
-template <>
-InputParameters validParams<ConcreteExpansionMicrocrackingDamage>();
 
 /**
  * Scalar damage model that is driven by the evolution of an internal eigenstrain that represents
@@ -31,6 +24,7 @@ InputParameters validParams<ConcreteExpansionMicrocrackingDamage>();
 class ConcreteExpansionMicrocrackingDamage : public ScalarDamageBase, public GuaranteeConsumer
 {
 public:
+  static InputParameters validParams();
   ConcreteExpansionMicrocrackingDamage(const InputParameters & parameters);
 
   virtual void initialSetup() override;
@@ -79,5 +73,3 @@ protected:
   /// Eigenvalues of the strain or stress tensor for current qp (computed only if needed)
   std::vector<Real> _eigenvalues;
 };
-
-#endif // CONCRETEEXPANSIONMICROCRACKINGDAMAGE_H

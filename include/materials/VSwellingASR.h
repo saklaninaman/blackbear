@@ -12,8 +12,7 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef VSWELLINGASR_H
-#define VSWELLINGASR_H
+#pragma once
 
 #include "VolumetricModel.h"
 #include "SymmTensor.h"
@@ -22,6 +21,7 @@
 class VSwellingASR : public VolumetricModel
 {
 public:
+  static InputParameters validParams();
   VSwellingASR(const InputParameters & parameters);
 
   void initStatefulProperties(unsigned n_points);
@@ -128,7 +128,3 @@ private:
   const MaterialProperty<SymmTensor> & _stress_prop;
 };
 
-template <>
-InputParameters validParams<VSwellingASR>();
-
-#endif // VSWELLINGASR_H

@@ -12,24 +12,19 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef BLACKBEARAPP_H
-#define BLACKBEARAPP_H
+#pragma once
 
 #include "MooseApp.h"
 
-class BlackBearApp;
 
-template <>
-InputParameters validParams<BlackBearApp>();
 
 class BlackBearApp : public MooseApp
 {
 public:
+  static InputParameters validParams();
   BlackBearApp(InputParameters parameters);
   virtual ~BlackBearApp();
 
   static void registerApps();
   static void registerAll(Factory & factory, ActionFactory & action_factory, Syntax & syntax);
 };
-
-#endif /* BLACKBEARAPP_H */

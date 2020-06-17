@@ -1,4 +1,4 @@
-#
+
 #
 #
 [GlobalParams]
@@ -176,28 +176,29 @@
 
 [BCs]
       [./fx]
-            type = PresetBC
+            type = DirichletBC
             variable = disp_x
             boundary = 4
             value = 0.0
       [../]
 
       [./fy]
-            type = PresetBC
+            type = DirichletBC
             variable = disp_y
             boundary = 1
             value = 0.0
       [../]
 
       [./fz]
-            type = PresetBC
+            type = DirichletBC
             variable = disp_z
             boundary = 0
             value = 0.0
       [../]
 
       [./px]
-            type = FunctionPresetBC
+            type = FunctionDirichletBC
+            preset = true
             variable = disp_x
             boundary = 2
             function = pull
@@ -219,8 +220,8 @@
 
   [./stress]
     type = NEMLStress
-    database = 'complex.xml'
-    model = 'example'
+    database = 'examples.xml'
+    model = 'complex_example'
   [../]
 []
 

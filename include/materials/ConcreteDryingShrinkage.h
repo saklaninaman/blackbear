@@ -12,20 +12,17 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETEDRYINGSHRINKAGE_H
-#define CONCRETEDRYINGSHRINKAGE_H
+#pragma once
 
 #include "ComputeEigenstrainBase.h"
 
-class ConcreteDryingShrinkage;
 
-template <>
-InputParameters validParams<ConcreteDryingShrinkage>();
 
 /** Computes drying shrinkage of concrete using a simple law */
 class ConcreteDryingShrinkage : public ComputeEigenstrainBase
 {
 public:
+  static InputParameters validParams();
   ConcreteDryingShrinkage(const InputParameters & parameters);
 
 protected:
@@ -47,5 +44,3 @@ protected:
   MaterialProperty<Real> * _irreversible_shrinkage;
   const MaterialProperty<Real> * _irreversible_shrinkage_old;
 };
-
-#endif // CONCRETEDRYINGSHRINKAGE_H

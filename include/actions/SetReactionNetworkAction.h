@@ -12,8 +12,7 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef SETREACTIONNETWORKACTION_H
-#define SETREACTIONNETWORKACTION_H
+#pragma once
 
 // MOOSE includes
 #include "Action.h"
@@ -21,14 +20,12 @@
 // libMesh includes
 #include "libmesh/fe_type.h"
 
-class SetReactionNetworkAction;
 
-template <>
-InputParameters validParams<SetReactionNetworkAction>();
 
 class SetReactionNetworkAction : public Action
 {
 public:
+  static InputParameters validParams();
   SetReactionNetworkAction(InputParameters params);
 
   virtual void act();
@@ -36,5 +33,3 @@ public:
 protected:
   const FEType _fe_type;
 };
-
-#endif // SETREACTIONNETWORKACTION_H

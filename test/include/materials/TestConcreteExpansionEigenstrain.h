@@ -12,17 +12,13 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef TESTCONCRETEEXPANSIONEIGENSTRAIN_H
-#define TESTCONCRETEEXPANSIONEIGENSTRAIN_H
+#pragma once
 
 #include "ConcreteExpansionEigenstrainBase.h"
 
 // forward declarations
-class TestConcreteExpansionEigenstrain;
 class Function;
 
-template <>
-InputParameters validParams<TestConcreteExpansionEigenstrain>();
 
 /**
  * Imposes a ConcreteExpansionEigenstrain in which the volumetric strain is
@@ -31,6 +27,7 @@ InputParameters validParams<TestConcreteExpansionEigenstrain>();
 class TestConcreteExpansionEigenstrain : public ConcreteExpansionEigenstrainBase
 {
 public:
+  static InputParameters validParams();
   TestConcreteExpansionEigenstrain(const InputParameters & parameters);
 
 protected:
@@ -40,5 +37,3 @@ protected:
   /// The function that defines the volumetric strain
   const Function & _function;
 };
-
-#endif // TESTCONCRETEEXPANSIONEIGENSTRAIN_H

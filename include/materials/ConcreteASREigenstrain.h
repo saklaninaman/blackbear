@@ -12,8 +12,7 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETEASREIGENSTRAIN_H
-#define CONCRETEASREIGENSTRAIN_H
+#pragma once
 
 #include "ConcreteExpansionEigenstrainBase.h"
 #include "RankTwoTensor.h"
@@ -29,6 +28,7 @@
 class ConcreteASREigenstrain : public ConcreteExpansionEigenstrainBase
 {
 public:
+  static InputParameters validParams();
   ConcreteASREigenstrain(const InputParameters & parameters);
 
   void initQpStatefulProperties() override;
@@ -109,7 +109,3 @@ private:
   Real _temp_offset;
 };
 
-template <>
-InputParameters validParams<ConcreteASREigenstrain>();
-
-#endif // CONCRETEASREIGENSTRAIN_H

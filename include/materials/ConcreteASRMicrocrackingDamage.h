@@ -12,16 +12,9 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETEASRMICROCRACKINGDAMAGE_H
-#define CONCRETEASRMICROCRACKINGDAMAGE_H
+#pragma once
 
 #include "ScalarDamageBase.h"
-
-// Forward declaration
-class ConcreteASRMicrocrackingDamage;
-
-template <>
-InputParameters validParams<ConcreteASRMicrocrackingDamage>();
 
 /**
  * Scalar damage model that defines the damage parameter using a material property
@@ -29,6 +22,7 @@ InputParameters validParams<ConcreteASRMicrocrackingDamage>();
 class ConcreteASRMicrocrackingDamage : public ScalarDamageBase
 {
 public:
+  static InputParameters validParams();
   ConcreteASRMicrocrackingDamage(const InputParameters & parameters);
 
 protected:
@@ -40,5 +34,3 @@ protected:
   ///@{ ASR extent (computed externally to this model)
   const MaterialProperty<Real> & _ASR_extent;
 };
-
-#endif // CONCRETEASRMICROCRACKINGDAMAGE_H

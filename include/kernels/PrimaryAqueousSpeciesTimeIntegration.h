@@ -12,20 +12,9 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef PRIMARYAQUEOUSSPECIESTIMEINTEGRATION_H
-#define PRIMARYAQUEOUSSPECIESTIMEINTEGRATION_H
+#pragma once
 
 #include "TimeDerivative.h"
-
-// Forward Declaration
-class PrimaryAqueousSpeciesTimeIntegration;
-
-/**
- * validParams returns the parameters that this Kernel accepts / needs
- * The actual body of the function MUST be in the .C file.
- */
-template <>
-InputParameters validParams<PrimaryAqueousSpeciesTimeIntegration>();
 
 /**
  * Define the Kernel for a CoupledConvectionReactionSub operator that looks like:
@@ -37,6 +26,7 @@ InputParameters validParams<PrimaryAqueousSpeciesTimeIntegration>();
 class PrimaryAqueousSpeciesTimeIntegration : public TimeDerivative
 {
 public:
+  static InputParameters validParams();
   PrimaryAqueousSpeciesTimeIntegration(const InputParameters & parameters);
 
 protected:
@@ -71,5 +61,3 @@ protected:
   // /// Coupled time derivatives of mineral concentrations (stored and computed as Aux variables).
   // std::vector<const VariableValue *> _dvals_dt;
 };
-
-#endif // PRIMARYAQUEOUSSPECIESTIMEINTEGRATION_H

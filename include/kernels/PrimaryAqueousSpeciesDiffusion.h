@@ -14,18 +14,7 @@
 
 #include "Diffusion.h"
 
-#ifndef PRIMARYAQUEOUSSPECIESDIFFUSION_H
-#define PRIMARYAQUEOUSSPECIESDIFFUSION_H
-
-// Forward Declarations
-class PrimaryAqueousSpeciesDiffusion;
-
-/**
- * validParams returns the parameters that this Kernel accepts / needs
- * The actual body of the function MUST be in the .C file.
- */
-template <>
-InputParameters validParams<PrimaryAqueousSpeciesDiffusion>();
+#pragma once
 
 /**
  * Define the Kernel for a CoupledConvectionReactionSub operator that looks like:
@@ -37,6 +26,7 @@ InputParameters validParams<PrimaryAqueousSpeciesDiffusion>();
 class PrimaryAqueousSpeciesDiffusion : public Diffusion
 {
 public:
+  static InputParameters validParams();
   PrimaryAqueousSpeciesDiffusion(const InputParameters & parameters);
 
 protected:
@@ -65,4 +55,3 @@ protected:
   const MaterialProperty<Real> & _porosity;
   const MaterialProperty<Real> & _diffusivity;
 };
-#endif // PRIMARYAQUEOUSSPECIESDIFFUSION_H

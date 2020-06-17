@@ -12,21 +12,15 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETETHERMALCONVECTION_H
-#define CONCRETETHERMALCONVECTION_H
+#pragma once
 
 #include "Kernel.h"
 #include "Material.h"
 
-// Forward Declarations
-class ConcreteThermalConvection;
-
-template <>
-InputParameters validParams<ConcreteThermalConvection>();
-
 class ConcreteThermalConvection : public Kernel
 {
 public:
+  static InputParameters validParams();
   ConcreteThermalConvection(const InputParameters & parameters);
 
 protected:
@@ -37,5 +31,3 @@ protected:
   const MaterialProperty<RealGradient> & _darcy_moisture_flux;
   // MooseArray<RealGradient> &_pore_velocity_water;
 };
-
-#endif // CONCRETETHERMALCONVECTION_H

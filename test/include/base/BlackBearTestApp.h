@@ -12,19 +12,16 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef BLACKBEARTESTAPP_H
-#define BLACKBEARTESTAPP_H
+#pragma once
 
 #include "BlackBearApp.h"
 
-class BlackBearTestApp;
 
-template <>
-InputParameters validParams<BlackBearTestApp>();
 
 class BlackBearTestApp : public BlackBearApp
 {
 public:
+  static InputParameters validParams();
   BlackBearTestApp(InputParameters parameters);
   virtual ~BlackBearTestApp();
 
@@ -34,5 +31,3 @@ public:
                           Syntax & syntax,
                           bool use_test_objs = false);
 };
-
-#endif /* BLACKBEARTESTAPP_H */

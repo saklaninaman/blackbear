@@ -12,15 +12,11 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#ifndef CONCRETELOGARITHMICCREEPMODEL_H
-#define CONCRETELOGARITHMICCREEPMODEL_H
+#pragma once
 
 #include "GeneralizedKelvinVoigtBase.h"
 
-class ConcreteLogarithmicCreepModel;
 
-template <>
-InputParameters validParams<ConcreteLogarithmicCreepModel>();
 
 /**
  * Creep model for concrete adapted from [Benboudjema and Torrenti, 2012]
@@ -35,6 +31,7 @@ InputParameters validParams<ConcreteLogarithmicCreepModel>();
 class ConcreteLogarithmicCreepModel : public GeneralizedKelvinVoigtBase
 {
 public:
+  static InputParameters validParams();
   ConcreteLogarithmicCreepModel(const InputParameters & parameters);
 
 protected:
@@ -73,5 +70,3 @@ protected:
   Real _drying_creep_viscosity;
   ///@}
 };
-
-#endif // CONCRETELOGARITHMICCREEPMODEL_H
